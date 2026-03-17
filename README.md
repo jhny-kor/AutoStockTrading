@@ -19,6 +19,7 @@
 - [한국투자증권 연결 가이드](./docs/kis-setup.md)
 - [공모주 일정 텔레그램 알림](./docs/ipo-telegram.md)
 - [로그 저장과 압축](./docs/logging.md)
+- [삼성전자/하이닉스 분석 로그](./docs/stock-analysis.md)
 
 ## 추천 방향
 
@@ -40,6 +41,7 @@
 5. `.venv/bin/python scripts/kis_quote_check.py`로 현재가 조회를 확인합니다.
 6. `.venv/bin/python scripts/ipo_schedule_check.py`로 공모주 청약일정을 확인합니다.
 7. `.venv/bin/python scripts/log_demo_event.py`로 날짜별 로그 저장 구조를 확인합니다.
+8. `.venv/bin/python scripts/stock_analysis_collector.py --once`로 삼성전자/하이닉스 분석 로그를 수집합니다.
 
 ## 초기 폴더 제안
 

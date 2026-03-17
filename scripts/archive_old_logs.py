@@ -23,6 +23,16 @@ def parse_iso_date(raw: str) -> date:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Archive old dated logs into tar.gz files.")
     parser.add_argument(
+        "--log-root",
+        default="logs",
+        help="Log root directory to archive. Default: logs",
+    )
+    parser.add_argument(
+        "--archive-root",
+        default="archives",
+        help="Archive output directory. Default: archives",
+    )
+    parser.add_argument(
         "--keep-days",
         type=int,
         default=14,
@@ -49,8 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     manager = LogDirectoryManager(
-        log_root=ROOT_DIR / "logs",
-        archive_root=ROOT_DIR / "archives",
+        log_root=ROOT_DIR / args.log_root,
+        archive_root=ROOT_DIR / args.archive_root,
     )
 
     try:

@@ -10,4 +10,6 @@ dist/
 build/
 *.egg-info/
 /logs/
+/analysis_logs/
+/structured_logs/
 /archives/

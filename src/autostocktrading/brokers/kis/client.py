@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 import json
 from typing import Any
 from urllib import error, parse, request
@@ -12,7 +13,13 @@ from .config import KisConfig
 
 TOKEN_PATH = "/oauth2/tokenP"
 INQUIRE_PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-price"
+INQUIRE_DAILY_PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-daily-price"
+INQUIRE_DAILY_ITEMCHART_PRICE_PATH = (
+    "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+)
 DEFAULT_DOMESTIC_PRICE_TR_ID = "FHKST01010100"
+DEFAULT_DAILY_PRICE_TR_ID = "FHKST01010400"
+DEFAULT_DAILY_ITEMCHART_TR_ID = "FHKST03010100"
 
 
 @dataclass(slots=True)
@@ -29,6 +36,8 @@ class KisApiError(RuntimeError):
 class KisApiClient:
     def __init__(self, config: KisConfig) -> None:
         self.config = config
+        self._cached_token: KisAccessToken | None = None
+        self._cached_token_expires_at: datetime | None = None
 
     def issue_access_token(self) -> KisAccessToken:
         payload = {
@@ -64,11 +73,22 @@ class KisApiClient:
         if not access_token:
             raise KisApiError(f"KIS token response did not include access_token: {decoded}")
 
-        return KisAccessToken(
+        token = KisAccessToken(
             access_token=access_token,
             token_type=token_type,
             expires_in=expires_in,
         )
+        self._cached_token = token
+        self._cached_token_expires_at = datetime.now() + timedelta(
+            seconds=max(expires_in - 60, 0)
+        )
+        return token
+
+    def get_access_token(self, *, force_refresh: bool = False) -> KisAccessToken:
+        if not force_refresh and self._cached_token and self._cached_token_expires_at:
+            if datetime.now() < self._cached_token_expires_at:
+                return self._cached_token
+        return self.issue_access_token()
 
     def inquire_price(
         self,
@@ -77,7 +97,7 @@ class KisApiClient:
         *,
         token: KisAccessToken | None = None,
     ) -> dict[str, Any]:
-        current_token = token or self.issue_access_token()
+        current_token = token or self.get_access_token()
         params = {
             "fid_cond_mrkt_div_code": market_code,
             "fid_input_iscd": symbol,
@@ -89,6 +109,64 @@ class KisApiClient:
         )
         return self._request_json(
             path=f"{INQUIRE_PRICE_PATH}?{query_string}",
+            method="GET",
+            headers=headers,
+        )
+
+    def inquire_daily_price(
+        self,
+        symbol: str,
+        market_code: str = "J",
+        period_code: str = "D",
+        adjusted_price: str = "1",
+        *,
+        token: KisAccessToken | None = None,
+    ) -> dict[str, Any]:
+        current_token = token or self.get_access_token()
+        params = {
+            "fid_cond_mrkt_div_code": market_code,
+            "fid_input_iscd": symbol,
+            "fid_org_adj_prc": adjusted_price,
+            "fid_period_div_code": period_code,
+        }
+        query_string = parse.urlencode(params)
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=DEFAULT_DAILY_PRICE_TR_ID,
+        )
+        return self._request_json(
+            path=f"{INQUIRE_DAILY_PRICE_PATH}?{query_string}",
+            method="GET",
+            headers=headers,
+        )
+
+    def inquire_daily_itemchart_price(
+        self,
+        symbol: str,
+        *,
+        start_date: str,
+        end_date: str,
+        market_code: str = "J",
+        period_code: str = "D",
+        adjusted_price: str = "1",
+        token: KisAccessToken | None = None,
+    ) -> dict[str, Any]:
+        current_token = token or self.get_access_token()
+        params = {
+            "fid_cond_mrkt_div_code": market_code,
+            "fid_input_iscd": symbol,
+            "fid_input_date_1": start_date,
+            "fid_input_date_2": end_date,
+            "fid_period_div_code": period_code,
+            "fid_org_adj_prc": adjusted_price,
+        }
+        query_string = parse.urlencode(params)
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=DEFAULT_DAILY_ITEMCHART_TR_ID,
+        )
+        return self._request_json(
+            path=f"{INQUIRE_DAILY_ITEMCHART_PRICE_PATH}?{query_string}",
             method="GET",
             headers=headers,
         )
