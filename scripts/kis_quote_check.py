@@ -13,6 +13,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from autostocktrading.brokers.kis import KisApiClient, KisConfig  # noqa: E402
+from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager  # noqa: E402
 from autostocktrading.utils.env import load_env_file  # noqa: E402
 
 
@@ -27,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--market-code",
         default="J",
         help="KIS market division code. Default: J",
+    )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Also append the quote response to the dated JSONL log store.",
     )
     return parser
 
@@ -62,6 +68,22 @@ def main() -> int:
     print(f"Change amount: {change_amount}")
     if message:
         print(f"Message: {message}")
+
+    if args.log:
+        logger = DailyJsonlLogger(
+            LogDirectoryManager(
+                log_root=ROOT_DIR / "logs",
+                archive_root=ROOT_DIR / "archives",
+            )
+        )
+        log_path = logger.append_event(
+            source="kis",
+            symbol=args.symbol,
+            category="market",
+            event_type="quote",
+            payload=response,
+        )
+        print(f"Logged to: {log_path}")
     return 0
 
 

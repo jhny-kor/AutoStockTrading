@@ -21,6 +21,7 @@ from autostocktrading.services.ipo_schedule import (  # noqa: E402
     filter_upcoming_entries,
     format_ipo_schedule_message,
 )
+from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager  # noqa: E402
 from autostocktrading.utils.env import load_env_file  # noqa: E402
 
 
@@ -54,6 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--reference-date",
         type=parse_iso_date,
         help="Override the reference date in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Also append the send result to the dated JSONL log store.",
     )
     return parser
 
@@ -97,6 +103,28 @@ def main() -> int:
     if not sent:
         print(f"[FAIL] Telegram send failed: {error or '알 수 없는 오류'}")
         return 1
+
+    if args.log:
+        logger = DailyJsonlLogger(
+            LogDirectoryManager(
+                log_root=ROOT_DIR / "logs",
+                archive_root=ROOT_DIR / "archives",
+            )
+        )
+        log_path = logger.append_event(
+            source="telegram",
+            category="notifications",
+            event_type="ipo_schedule",
+            payload={
+                "mode": args.mode,
+                "reference_date": (
+                    args.reference_date.isoformat() if args.reference_date else None
+                ),
+                "sent": True,
+                "entry_count": len(selected[: args.limit]),
+            },
+        )
+        print(f"Logged to: {log_path}")
 
     print("[OK] IPO schedule sent to Telegram.")
     return 0

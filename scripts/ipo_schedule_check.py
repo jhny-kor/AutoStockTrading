@@ -20,6 +20,7 @@ from autostocktrading.services.ipo_schedule import (  # noqa: E402
     filter_upcoming_entries,
     format_ipo_schedule_message,
 )
+from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager  # noqa: E402
 from autostocktrading.utils.env import load_env_file  # noqa: E402
 
 
@@ -52,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=parse_iso_date,
         help="Override the reference date in YYYY-MM-DD format.",
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Also append the selected schedule entries to the dated JSONL log store.",
+    )
     return parser
 
 
@@ -82,12 +88,45 @@ def main() -> int:
         return 1
 
     print("[OK] IPO schedule fetch succeeded.")
+    selected_entries = selected[: args.limit]
     print(
         format_ipo_schedule_message(
-            selected[: args.limit],
+            selected_entries,
             title=_resolve_title(args.mode, args.reference_date),
         )
     )
+
+    if args.log:
+        logger = DailyJsonlLogger(
+            LogDirectoryManager(
+                log_root=ROOT_DIR / "logs",
+                archive_root=ROOT_DIR / "archives",
+            )
+        )
+        log_path = logger.append_event(
+            source="ipo",
+            category="schedule",
+            event_type="subscription",
+            payload={
+                "mode": args.mode,
+                "reference_date": (
+                    args.reference_date.isoformat() if args.reference_date else None
+                ),
+                "entries": [
+                    {
+                        "name": entry.name,
+                        "subscription_period": entry.subscription_period,
+                        "fixed_offer_price": entry.fixed_offer_price,
+                        "target_offer_price": entry.target_offer_price,
+                        "competition_rate": entry.competition_rate,
+                        "lead_underwriters": entry.lead_underwriters,
+                        "source_path": entry.source_path,
+                    }
+                    for entry in selected_entries
+                ],
+            },
+        )
+        print(f"Logged to: {log_path}")
     return 0
 
 
