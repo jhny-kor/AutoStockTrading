@@ -7,7 +7,8 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/plo/Documents/auto_stock_bot/scripts/autostart_all.sh</string>
+    <string>/Users/plo/Documents/auto_stock_bot/.venv/bin/python</string>
+    <string>/Users/plo/Documents/auto_stock_bot/scripts/stock_analysis_collector.py</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -17,7 +18,10 @@
   <true/>
 
   <key>KeepAlive</key>
-  <false/>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
 
   <key>StandardOutPath</key>
   <string>/Users/plo/Documents/auto_stock_bot/logs/launchd_autostart.out</string>
