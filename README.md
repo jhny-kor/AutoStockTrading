@@ -20,6 +20,7 @@
 - [공모주 일정 텔레그램 알림](./docs/ipo-telegram.md)
 - [로그 저장과 압축](./docs/logging.md)
 - [삼성전자/하이닉스 분석 로그](./docs/stock-analysis.md)
+- [프로세스 관리](./docs/process-management.md)
 
 ## 추천 방향
 
