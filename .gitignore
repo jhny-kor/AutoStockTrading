@@ -11,5 +11,7 @@ build/
 *.egg-info/
 /logs/
 /analysis_logs/
+/news_logs/
+/disclosure_logs/
 /structured_logs/
 /archives/

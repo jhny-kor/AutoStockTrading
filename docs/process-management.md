@@ -9,6 +9,8 @@
 - `bot_manager.py`
 - `scripts/autostart_all.sh`
 - `launchd/com.plo.autostockbot.startall.plist`
+- `launchd/com.plo.autostockbot.reporter.plist`
+- `launchd/com.plo.autostockbot.disclosure.plist`
 
 ## 가능한 명령
 
@@ -22,6 +24,18 @@
 
 ```bash
 .venv/bin/python bot_manager.py start collector
+```
+
+일일 리포트 스케줄러 시작:
+
+```bash
+.venv/bin/python bot_manager.py start reporter
+```
+
+중요 공시 감시기 시작:
+
+```bash
+.venv/bin/python bot_manager.py start disclosure
 ```
 
 전체 시작:
@@ -64,6 +78,8 @@ structured_logs/YYYY-MM-DD/...
 부팅 시 자동 시작까지 원하면 아래 plist를 사용할 수 있습니다.
 
 - `launchd/com.plo.autostockbot.startall.plist`
+- `launchd/com.plo.autostockbot.reporter.plist`
+- `launchd/com.plo.autostockbot.disclosure.plist`
 
 일반적인 설치 예시:
 

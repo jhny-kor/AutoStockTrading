@@ -15,6 +15,7 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from autostocktrading.config import DEFAULT_ANALYSIS_WATCHLIST, get_default_symbols  # noqa: E402
 from autostocktrading.brokers.kis import KisApiClient, KisConfig  # noqa: E402
 from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager  # noqa: E402
 from autostocktrading.services.stock_analysis import (  # noqa: E402
@@ -25,17 +26,17 @@ from autostocktrading.strategies import evaluate_buy_candidate  # noqa: E402
 from autostocktrading.utils.env import load_env_file  # noqa: E402
 
 
-DEFAULT_SYMBOLS = ["005930", "000660"]
+DEFAULT_SYMBOLS = get_default_symbols()
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Collect stock analysis snapshots for Samsung Electronics and SK hynix."
+        description="Collect dated analysis snapshots for the default Korean stock watchlist."
     )
     parser.add_argument(
         "--symbols",
         default=",".join(DEFAULT_SYMBOLS),
-        help="Comma-separated stock codes. Default: 005930,000660",
+        help="Comma-separated stock codes. Default: watchlist symbols",
     )
     parser.add_argument(
         "--interval-sec",
@@ -139,6 +140,25 @@ def main() -> int:
     if not symbols:
         print("[FAIL] No symbols were provided.")
         return 1
+
+    print(
+        json.dumps(
+            {
+                "watchlist": [
+                    {
+                        "symbol": entry.symbol,
+                        "name": entry.name,
+                        "theme": entry.theme,
+                    }
+                    for entry in DEFAULT_ANALYSIS_WATCHLIST
+                    if entry.symbol in symbols
+                ],
+                "interval_sec": args.interval_sec,
+                "history_days": args.history_days,
+            },
+            ensure_ascii=False,
+        )
+    )
 
     config = KisConfig.from_env()
     client = KisApiClient(config)

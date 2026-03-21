@@ -1,7 +1,7 @@
 """
-한국주식 분석 수집기 프로세스 관리 도구
+한국주식 자동매매 보조 프로세스 관리 도구
 
-- 분석 수집기 상태 확인
+- 분석 수집기, 리포트 스케줄러, 공시 감시기 상태 확인
 - 백그라운드 시작
 - 정상 종료 및 강제 종료
 - launchd 자동 시작과 함께 사용할 수 있는 진입점 제공
@@ -10,11 +10,17 @@
 - .venv/bin/python bot_manager.py status
 - .venv/bin/python bot_manager.py start all
 - .venv/bin/python bot_manager.py start collector
+- .venv/bin/python bot_manager.py start reporter
+- .venv/bin/python bot_manager.py start disclosure
 - .venv/bin/python bot_manager.py stop
 - .venv/bin/python bot_manager.py stop all
 - .venv/bin/python bot_manager.py stop collector
+- .venv/bin/python bot_manager.py stop reporter
+- .venv/bin/python bot_manager.py stop disclosure
 - .venv/bin/python bot_manager.py stop --force
 - .venv/bin/python bot_manager.py stop collector --force
+- .venv/bin/python bot_manager.py stop reporter --force
+- .venv/bin/python bot_manager.py stop disclosure --force
 """
 
 from __future__ import annotations
@@ -33,10 +39,14 @@ from datetime import datetime
 
 PROGRAMS = {
     "collector": "scripts/stock_analysis_collector.py",
+    "reporter": "scripts/daily_report_scheduler.py",
+    "disclosure": "scripts/important_disclosure_watcher.py",
 }
 
 SECTION_TITLES = {
     "collector": "한국주식 분석 수집기",
+    "reporter": "일일 리포트 스케줄러",
+    "disclosure": "중요 공시 감시기",
 }
 
 RESET = "\033[0m"
@@ -45,6 +55,9 @@ RED = "\033[31m"
 GREEN = "\033[32m"
 BLUE = "\033[34m"
 CYAN = "\033[36m"
+YELLOW = "\033[33m"
+PROCESS_LIST_WARNING: str | None = None
+PID_DIR = Path("logs") / "pids"
 
 
 @dataclass
@@ -55,6 +68,82 @@ class ManagedProcess:
     ppid: int
     elapsed: str
     command: str
+
+
+def pid_file_path(name: str) -> Path:
+    return PID_DIR / f"{name}.pid"
+
+
+def is_pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def read_pid_file(name: str) -> int | None:
+    path = pid_file_path(name)
+    if not path.exists():
+        return None
+
+    try:
+        return int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def write_pid_file(name: str, pid: int) -> None:
+    PID_DIR.mkdir(parents=True, exist_ok=True)
+    pid_file_path(name).write_text(str(pid), encoding="utf-8")
+
+
+def remove_pid_file(name: str) -> None:
+    path = pid_file_path(name)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+
+
+def build_pidfile_fallback_processes(exclude_current: bool = True) -> list[ManagedProcess]:
+    current_pid = os.getpid()
+    processes: list[ManagedProcess] = []
+
+    for name, script in PROGRAMS.items():
+        pid = read_pid_file(name)
+        if pid is None:
+            continue
+        if exclude_current and pid == current_pid:
+            continue
+        if not is_pid_alive(pid):
+            remove_pid_file(name)
+            continue
+
+        processes.append(
+            ManagedProcess(
+                name=name,
+                script=script,
+                pid=pid,
+                ppid=0,
+                elapsed="?",
+                command=f"{script} (pidfile)",
+            )
+        )
+
+    return processes
+
+
+def merge_with_pidfile_processes(
+    processes: list[ManagedProcess],
+    exclude_current: bool = True,
+) -> list[ManagedProcess]:
+    by_name = {proc.name: proc for proc in processes}
+    for proc in build_pidfile_fallback_processes(exclude_current=exclude_current):
+        by_name.setdefault(proc.name, proc)
+    return list(by_name.values())
 
 
 def command_matches_script(command: str, script: str) -> bool:
@@ -85,12 +174,30 @@ def dated_log_path(filename: str) -> Path:
 
 
 def list_managed_processes(exclude_current: bool = True) -> list[ManagedProcess]:
-    result = subprocess.run(
-        ["ps", "-Ao", "pid=,ppid=,etime=,command="],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    global PROCESS_LIST_WARNING
+    PROCESS_LIST_WARNING = None
+
+    try:
+        result = subprocess.run(
+            ["ps", "-Ao", "pid=,ppid=,etime=,command="],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except PermissionError:
+        PROCESS_LIST_WARNING = (
+            "프로세스 목록 조회 권한이 없어 PID 파일 기준 상태를 표시합니다."
+        )
+        return build_pidfile_fallback_processes(exclude_current=exclude_current)
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").strip()
+        PROCESS_LIST_WARNING = (
+            "프로세스 목록 조회에 실패해 PID 파일 기준 상태를 표시합니다."
+            if not stderr
+            else f"프로세스 목록 조회에 실패해 PID 파일 기준 상태를 표시합니다: {stderr}"
+        )
+        return build_pidfile_fallback_processes(exclude_current=exclude_current)
+
     current_pid = os.getpid()
     processes: list[ManagedProcess] = []
 
@@ -122,7 +229,14 @@ def list_managed_processes(exclude_current: bool = True) -> list[ManagedProcess]
                 )
                 break
 
-    return processes
+    active_names = {proc.name for proc in processes}
+    for proc in processes:
+        write_pid_file(proc.name, proc.pid)
+    for name in PROGRAMS:
+        if name not in active_names:
+            remove_pid_file(name)
+
+    return merge_with_pidfile_processes(processes, exclude_current=exclude_current)
 
 
 def get_processes_by_name(name: str) -> list[ManagedProcess]:
@@ -141,6 +255,14 @@ def build_status_lines(use_color: bool = True) -> list[str]:
     else:
         lines.append(header)
         lines.append(separator)
+
+    if PROCESS_LIST_WARNING:
+        warning_text = (
+            color_text(f"안내: {PROCESS_LIST_WARNING}", YELLOW, bold=True)
+            if use_color
+            else f"안내: {PROCESS_LIST_WARNING}"
+        )
+        lines.append(warning_text)
 
     for name, script in PROGRAMS.items():
         matched = [proc for proc in processes if proc.name == name]
@@ -207,6 +329,7 @@ def start_program(name: str) -> int:
             start_new_session=True,
         )
 
+    write_pid_file(name, process.pid)
     print(f"{name} 시작 요청 완료 (PID {process.pid})")
     print(f"- stdout: {stdout_path}")
     print(f"- stderr: {stderr_path}")
@@ -215,7 +338,8 @@ def start_program(name: str) -> int:
 
 def handle_start(target: str) -> int:
     if target == "all":
-        return start_program("collector")
+        codes = [start_program(name) for name in ("collector", "reporter", "disclosure")]
+        return 0 if all(code == 0 for code in codes) else 1
     return start_program(target)
 
 
@@ -276,6 +400,12 @@ def handle_stop(target: str = "all", force: bool = False) -> int:
         return 1
 
     if target == "all":
+        for name in PROGRAMS:
+            remove_pid_file(name)
+    else:
+        remove_pid_file(target)
+
+    if target == "all":
         print("모든 관리 대상 프로세스가 중지되었습니다.")
     else:
         print(f"{target} 관리 대상 프로세스가 중지되었습니다.")
@@ -291,7 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser = subparsers.add_parser("start", help="프로세스를 시작합니다.")
     start_parser.add_argument(
         "target",
-        choices=["all", "collector"],
+        choices=["all", "collector", "reporter", "disclosure"],
         help="시작할 대상",
     )
 
@@ -300,7 +430,7 @@ def build_parser() -> argparse.ArgumentParser:
         "target",
         nargs="?",
         default="all",
-        choices=["all", "collector"],
+        choices=["all", "collector", "reporter", "disclosure"],
         help="중지할 대상 (기본값: all)",
     )
     stop_parser.add_argument(

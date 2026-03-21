@@ -7,11 +7,7 @@ from datetime import date, datetime
 from statistics import mean
 from typing import Any
 
-
-SYMBOL_DISPLAY_NAMES = {
-    "005930": "삼성전자",
-    "000660": "SK하이닉스",
-}
+from autostocktrading.config import get_watchlist_entry
 
 
 def _to_int(value: Any) -> int | None:
@@ -174,10 +170,11 @@ def build_stock_analysis_snapshot(
 ) -> dict[str, Any]:
     current_time = collected_at or datetime.now()
     quote = quote_response.get("output") or {}
+    watchlist_entry = get_watchlist_entry(symbol)
     name = (
         quote.get("hts_kor_isnm")
         or quote.get("prdt_name")
-        or SYMBOL_DISPLAY_NAMES.get(symbol)
+        or (watchlist_entry.name if watchlist_entry else None)
         or symbol
     )
 
@@ -218,6 +215,8 @@ def build_stock_analysis_snapshot(
             "collected_at_local": current_time.astimezone().isoformat(timespec="seconds"),
             "symbol": symbol,
             "name": name,
+            "theme": watchlist_entry.theme if watchlist_entry else None,
+            "long_term_reason": watchlist_entry.long_term_reason if watchlist_entry else None,
             "market": "KRX",
             "source": "kis",
             "current_price": current_price,
