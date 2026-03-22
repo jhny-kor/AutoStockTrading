@@ -1,4 +1,4 @@
-"""Build a readable report from collected stock analysis logs."""
+"""Run the KOSPI/KOSDAQ value + dividend + trend-recovery screener."""
 
 from __future__ import annotations
 
@@ -13,10 +13,8 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from autostocktrading.services.analysis_report import (  # noqa: E402
-    build_analysis_report,
-    find_latest_analysis_date,
-)
+from autostocktrading.services.analysis_report import find_latest_analysis_date  # noqa: E402
+from autostocktrading.services.value_screener import build_screener_report  # noqa: E402
 
 
 def parse_iso_date(raw: str) -> date:
@@ -24,22 +22,14 @@ def parse_iso_date(raw: str) -> date:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build a stock analysis summary report.")
-    parser.add_argument(
-        "--date",
-        type=parse_iso_date,
-        help="Report date in YYYY-MM-DD format. Default: latest available date.",
-    )
+    parser = argparse.ArgumentParser(description="Run the value + dividend + trend-recovery screener.")
+    parser.add_argument("--date", type=parse_iso_date, help="Target date in YYYY-MM-DD format.")
     parser.add_argument(
         "--watchlists",
         default="all",
         help="Comma-separated watchlists: large,mid,small,all. Default: all",
     )
-    parser.add_argument(
-        "--write",
-        action="store_true",
-        help="Also write the report into reports/YYYY-MM-DD/stock-analysis-report.md",
-    )
+    parser.add_argument("--write", action="store_true", help="Also write the report to reports/YYYY-MM-DD.")
     return parser
 
 
@@ -51,18 +41,16 @@ def main() -> int:
         return 1
 
     watchlists = [item.strip() for item in args.watchlists.split(",") if item.strip()]
-    report = build_analysis_report(target_date, watchlists=watchlists)
+    report = build_screener_report(target_date=target_date, watchlists=watchlists)
     print(report)
 
     if args.write:
         report_dir = ROOT_DIR / "reports" / target_date.isoformat()
         report_dir.mkdir(parents=True, exist_ok=True)
-        suffix = "-".join(watchlists) if watchlists else "all"
-        report_path = report_dir / f"stock-analysis-report-{suffix}.md"
+        report_path = report_dir / "value-recovery-screener.md"
         report_path.write_text(report, encoding="utf-8")
         print("")
         print(f"[OK] Report written to {report_path}")
-
     return 0
 
 

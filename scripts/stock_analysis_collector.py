@@ -15,7 +15,7 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from autostocktrading.config import DEFAULT_ANALYSIS_WATCHLIST, get_default_symbols  # noqa: E402
+from autostocktrading.config import DEFAULT_ANALYSIS_WATCHLIST, get_default_symbols, resolve_watchlist_entries  # noqa: E402
 from autostocktrading.brokers.kis import KisApiClient, KisConfig  # noqa: E402
 from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager  # noqa: E402
 from autostocktrading.services.stock_analysis import (  # noqa: E402
@@ -37,6 +37,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--symbols",
         default=",".join(DEFAULT_SYMBOLS),
         help="Comma-separated stock codes. Default: watchlist symbols",
+    )
+    parser.add_argument(
+        "--watchlists",
+        default="all",
+        help="Comma-separated watchlist scopes: large,mid,small,all. Default: all",
     )
     parser.add_argument(
         "--interval-sec",
@@ -141,6 +146,12 @@ def main() -> int:
         print("[FAIL] No symbols were provided.")
         return 1
 
+    selected_watchlists = [item.strip() for item in args.watchlists.split(",") if item.strip()]
+    selected_entries = resolve_watchlist_entries(selected_watchlists)
+    if selected_entries:
+        selected_symbols = {entry.symbol for entry in selected_entries}
+        symbols = [symbol for symbol in symbols if symbol in selected_symbols]
+
     print(
         json.dumps(
             {
@@ -153,6 +164,7 @@ def main() -> int:
                     for entry in DEFAULT_ANALYSIS_WATCHLIST
                     if entry.symbol in symbols
                 ],
+                "watchlists": selected_watchlists,
                 "interval_sec": args.interval_sec,
                 "history_days": args.history_days,
             },

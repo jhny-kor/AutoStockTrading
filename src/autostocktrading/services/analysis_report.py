@@ -7,7 +7,7 @@ from datetime import date
 import json
 from pathlib import Path
 
-from autostocktrading.config import DEFAULT_ANALYSIS_WATCHLIST
+from autostocktrading.config import resolve_watchlist_entries
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
@@ -37,15 +37,17 @@ def read_latest_payload(path: Path) -> dict | None:
     return json.loads(lines[-1]).get("payload")
 
 
-def build_analysis_report(target_date: date) -> str:
+def build_analysis_report(target_date: date, watchlists: list[str] | None = None) -> str:
     date_str = target_date.isoformat()
-    lines: list[str] = ["# 주식 분석 리포트", "", f"- 기준일: {date_str}", ""]
+    selected_entries = resolve_watchlist_entries(watchlists)
+    label = "/".join(watchlists) if watchlists else "all"
+    lines: list[str] = ["# 주식 분석 리포트", "", f"- 기준일: {date_str}", f"- 대상: {label}", ""]
 
     candidate_lines: list[str] = []
     summaries: list[str] = []
     type_buckets: dict[str, list[str]] = defaultdict(list)
 
-    for entry in DEFAULT_ANALYSIS_WATCHLIST:
+    for entry in selected_entries:
         analysis_path = ROOT_DIR / "analysis_logs" / date_str / "kis_analysis" / entry.symbol / "stocks" / "snapshot.jsonl"
         strategy_path = ROOT_DIR / "structured_logs" / date_str / "stock_strategy" / entry.symbol / "korean_bluechips" / "buy_candidate.jsonl"
 

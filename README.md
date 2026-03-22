@@ -46,6 +46,7 @@
 8. `.venv/bin/python scripts/stock_analysis_collector.py --once`로 기본 감시 종목 분석 로그를 수집합니다.
 9. `.venv/bin/python scripts/stock_analysis_report.py`로 최신 요약 리포트를 확인합니다.
 10. `.venv/bin/python scripts/news_check.py`로 감시 종목 관련 최근 뉴스를 확인합니다.
+11. `.venv/bin/python scripts/daily_data_pipeline.py --archive-dry-run`으로 수집·분석·압축 대상을 일괄 점검합니다.
 
 ## 초기 폴더 제안
 

@@ -79,6 +79,25 @@ structured_logs/
 - `267260` HD현대일렉트릭
 - `012450` 한화에어로스페이스
 - `017670` SK텔레콤
+- `005380` 현대차
+- `000270` 기아
+- `035420` NAVER
+- `000810` 삼성화재
+
+별도 watchlist:
+
+- `large`: 대형 우량주
+- `mid`: 중형주 후보군
+- `small`: 소형주 후보군
+
+예시:
+
+```bash
+.venv/bin/python scripts/stock_analysis_collector.py --once --watchlists mid
+.venv/bin/python scripts/stock_analysis_collector.py --once --watchlists small
+.venv/bin/python scripts/stock_analysis_report.py --watchlists mid
+.venv/bin/python scripts/stock_analysis_report.py --watchlists small
+```
 
 ## 로그 활용 예시
 
