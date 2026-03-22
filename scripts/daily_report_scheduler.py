@@ -84,7 +84,7 @@ def main() -> int:
                 )
                 digest = hashlib.sha256(message.encode("utf-8")).hexdigest()
                 if state.get("last_report_hash") != digest or state.get("last_report_date") != today:
-                    sent, error = notifier.send_message_detailed(message)
+                    sent, error = notifier.send_message_chunks(message)
                     if sent:
                         sent_for_today.append(slot_label)
                         state["last_report_hash"] = digest

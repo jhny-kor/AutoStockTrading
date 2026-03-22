@@ -82,6 +82,34 @@ class TelegramNotifier:
 
         return True, None
 
+    def send_message_chunks(self, text: str, limit: int = 3900) -> tuple[bool, str | None]:
+        chunks = split_telegram_text(text, limit=limit)
+        for chunk in chunks:
+            sent, error = self.send_message_detailed(chunk)
+            if not sent:
+                return False, error
+        return True, None
+
+
+def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
+    normalized = text.strip()
+    if not normalized:
+        return [""]
+    if len(normalized) <= limit:
+        return [normalized]
+
+    chunks: list[str] = []
+    remaining = normalized
+    while len(remaining) > limit:
+        split_at = remaining.rfind("\n", 0, limit)
+        if split_at <= 0:
+            split_at = limit
+        chunks.append(remaining[:split_at].strip())
+        remaining = remaining[split_at:].strip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
 
 def load_telegram_notifier() -> TelegramNotifier:
     return TelegramNotifier(

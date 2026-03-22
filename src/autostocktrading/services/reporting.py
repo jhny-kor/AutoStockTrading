@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from autostocktrading.config import DEFAULT_ANALYSIS_WATCHLIST, get_default_symbols
+from .analysis_report import build_analysis_report
 from .disclosures import format_disclosures_text, fetch_recent_disclosures
 from .news import fetch_stock_news, format_news_text
 
@@ -17,10 +18,7 @@ def _read_report_file(target_date: date) -> str:
     report_path = ROOT_DIR / "reports" / target_date.isoformat() / "stock-analysis-report.md"
     if report_path.exists():
         return report_path.read_text(encoding="utf-8")
-
-    from scripts.stock_analysis_report import build_report  # local import to avoid circular dependency
-
-    return build_report(target_date)
+    return build_analysis_report(target_date)
 
 
 def build_daily_report_message(
