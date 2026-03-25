@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import mimetypes
 import os
 from typing import Any
+from uuid import uuid4
 from urllib import error, request
 
 
@@ -88,6 +90,70 @@ class TelegramNotifier:
             sent, error = self.send_message_detailed(chunk)
             if not sent:
                 return False, error
+        return True, None
+
+    def send_document(self, file_path: str, caption: str | None = None) -> tuple[bool, str | None]:
+        if not self.enabled:
+            return False, "텔레그램 알림이 비활성화되어 있습니다."
+        if not self.bot_token or not self.chat_id:
+            return False, "텔레그램 봇 토큰 또는 chat id 가 비어 있습니다."
+
+        boundary = f"----CodexTelegram{uuid4().hex}"
+        content_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+        filename = os.path.basename(file_path)
+        with open(file_path, "rb") as handle:
+            file_bytes = handle.read()
+
+        parts: list[bytes] = []
+        for name, value in (
+            ("chat_id", self.chat_id),
+            ("caption", caption or ""),
+        ):
+            if not value:
+                continue
+            parts.extend(
+                [
+                    f"--{boundary}\r\n".encode("utf-8"),
+                    f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8"),
+                    f"{value}\r\n".encode("utf-8"),
+                ]
+            )
+
+        parts.extend(
+            [
+                f"--{boundary}\r\n".encode("utf-8"),
+                f'Content-Disposition: form-data; name="document"; filename="{filename}"\r\n'.encode("utf-8"),
+                f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"),
+                file_bytes,
+                b"\r\n",
+                f"--{boundary}--\r\n".encode("utf-8"),
+            ]
+        )
+
+        http_request = request.Request(
+            url=f"https://api.telegram.org/bot{self.bot_token}/sendDocument",
+            data=b"".join(parts),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+
+        try:
+            with request.urlopen(http_request, timeout=20) as response:
+                raw_body = response.read().decode("utf-8")
+        except (error.HTTPError, error.URLError, TimeoutError, ValueError) as exc:
+            return False, format_telegram_request_error(exc)
+
+        try:
+            parsed: Any = json.loads(raw_body)
+        except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+            return False, format_telegram_request_error(exc)
+
+        if isinstance(parsed, dict) and parsed.get("ok") is False:
+            description = parsed.get("description")
+            if isinstance(description, str) and description.strip():
+                return False, description.strip()
+            return False, "텔레그램 API 가 문서 전송을 거부했습니다."
+
         return True, None
 
 

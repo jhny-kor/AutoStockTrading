@@ -10,15 +10,21 @@
 - .venv/bin/python bot_manager.py status
 - .venv/bin/python bot_manager.py start all
 - .venv/bin/python bot_manager.py start collector
+- .venv/bin/python bot_manager.py start kr_long
+- .venv/bin/python bot_manager.py start kr_short
 - .venv/bin/python bot_manager.py start reporter
 - .venv/bin/python bot_manager.py start disclosure
 - .venv/bin/python bot_manager.py stop
 - .venv/bin/python bot_manager.py stop all
 - .venv/bin/python bot_manager.py stop collector
+- .venv/bin/python bot_manager.py stop kr_long
+- .venv/bin/python bot_manager.py stop kr_short
 - .venv/bin/python bot_manager.py stop reporter
 - .venv/bin/python bot_manager.py stop disclosure
 - .venv/bin/python bot_manager.py stop --force
 - .venv/bin/python bot_manager.py stop collector --force
+- .venv/bin/python bot_manager.py stop kr_long --force
+- .venv/bin/python bot_manager.py stop kr_short --force
 - .venv/bin/python bot_manager.py stop reporter --force
 - .venv/bin/python bot_manager.py stop disclosure --force
 """
@@ -39,12 +45,16 @@ from datetime import datetime
 
 PROGRAMS = {
     "collector": "scripts/stock_analysis_collector.py",
+    "kr_long": "scripts/kr_long_term_runner.py",
+    "kr_short": "scripts/kr_short_term_runner.py",
     "reporter": "scripts/daily_report_scheduler.py",
     "disclosure": "scripts/important_disclosure_watcher.py",
 }
 
 SECTION_TITLES = {
     "collector": "한국주식 분석 수집기",
+    "kr_long": "국장 장타 시그널 러너",
+    "kr_short": "국장 단타 시그널 러너",
     "reporter": "일일 리포트 스케줄러",
     "disclosure": "중요 공시 감시기",
 }
@@ -338,7 +348,7 @@ def start_program(name: str) -> int:
 
 def handle_start(target: str) -> int:
     if target == "all":
-        codes = [start_program(name) for name in ("collector", "reporter", "disclosure")]
+        codes = [start_program(name) for name in ("collector", "kr_long", "kr_short", "reporter", "disclosure")]
         return 0 if all(code == 0 for code in codes) else 1
     return start_program(target)
 
@@ -421,7 +431,7 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser = subparsers.add_parser("start", help="프로세스를 시작합니다.")
     start_parser.add_argument(
         "target",
-        choices=["all", "collector", "reporter", "disclosure"],
+        choices=["all", "collector", "kr_long", "kr_short", "reporter", "disclosure"],
         help="시작할 대상",
     )
 
@@ -430,7 +440,7 @@ def build_parser() -> argparse.ArgumentParser:
         "target",
         nargs="?",
         default="all",
-        choices=["all", "collector", "reporter", "disclosure"],
+        choices=["all", "collector", "kr_long", "kr_short", "reporter", "disclosure"],
         help="중지할 대상 (기본값: all)",
     )
     stop_parser.add_argument(

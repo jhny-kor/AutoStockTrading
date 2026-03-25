@@ -30,6 +30,7 @@ def build_daily_report_message(
 ) -> str:
     sections: list[str] = [f"[주식 일일 리포트] {target_date.isoformat()} {slot_label}", ""]
     sections.append(_read_report_file(target_date).strip())
+    sections.extend(_build_strategy_candidate_sections(target_date))
 
     chosen_symbols = news_symbols or ["005930", "000660", "105560"]
     news_blocks: list[str] = []
@@ -83,3 +84,48 @@ IMPORTANT_DISCLOSURE_KEYWORDS = (
 
 def is_important_disclosure(report_name: str) -> bool:
     return any(keyword in report_name for keyword in IMPORTANT_DISCLOSURE_KEYWORDS)
+
+
+def _read_strategy_payload(target_date: date, strategy_source: str, symbol: str, category: str) -> dict | None:
+    path = (
+        ROOT_DIR
+        / "structured_logs"
+        / target_date.isoformat()
+        / strategy_source
+        / symbol
+        / category
+        / "entry_candidate.jsonl"
+    )
+    if not path.exists():
+        return None
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return None
+    import json
+
+    return json.loads(lines[-1]).get("payload")
+
+
+def _build_strategy_candidate_sections(target_date: date) -> list[str]:
+    from autostocktrading.config.kr_strategy_watchlists import get_long_term_entries, get_short_term_entries
+
+    sections: list[str] = ["", "## 장타 후보", *_format_strategy_section(target_date, "kr_long_term", "long_term", get_long_term_entries())]
+    sections.extend(["", "## 단타 후보", *_format_strategy_section(target_date, "kr_short_term", "short_term", get_short_term_entries())])
+    return sections
+
+
+def _format_strategy_section(target_date: date, strategy_source: str, category: str, entries) -> list[str]:
+    lines: list[str] = []
+    found = False
+    for entry in entries:
+        payload = _read_strategy_payload(target_date, strategy_source, entry.symbol, category)
+        if not payload or not payload.get("entry_candidate"):
+            continue
+        found = True
+        lines.append(
+            f"- {entry.name} ({entry.symbol}) | {payload.get('candidate_type')} | "
+            f"RSI {payload.get('rsi_14')} | 20일선 대비 {payload.get('price_vs_sma_20_pct')}%"
+        )
+    if not found:
+        lines.append("- 현재 기준 후보 없음")
+    return lines

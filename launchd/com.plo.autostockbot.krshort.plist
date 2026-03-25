@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.plo.autostockbot.krshort</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/plo/Documents/auto_stock_bot/.venv/bin/python</string>
+    <string>/Users/plo/Documents/auto_stock_bot/scripts/kr_short_term_runner.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/plo/Documents/auto_stock_bot</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>/Users/plo/Documents/auto_stock_bot/logs/kr_short_term_runner.out</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/plo/Documents/auto_stock_bot/logs/kr_short_term_runner.err</string>
+</dict>
+</plist>
