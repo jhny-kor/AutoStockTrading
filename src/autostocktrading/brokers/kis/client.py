@@ -12,14 +12,20 @@ from .config import KisConfig
 
 
 TOKEN_PATH = "/oauth2/tokenP"
+HASHKEY_PATH = "/uapi/hashkey"
 INQUIRE_PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-price"
 INQUIRE_DAILY_PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-daily-price"
 INQUIRE_DAILY_ITEMCHART_PRICE_PATH = (
     "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
 )
+ORDER_CASH_PATH = "/uapi/domestic-stock/v1/trading/order-cash"
 DEFAULT_DOMESTIC_PRICE_TR_ID = "FHKST01010100"
 DEFAULT_DAILY_PRICE_TR_ID = "FHKST01010400"
 DEFAULT_DAILY_ITEMCHART_TR_ID = "FHKST03010100"
+LIVE_ORDER_BUY_TR_ID = "TTTC0802U"
+LIVE_ORDER_SELL_TR_ID = "TTTC0801U"
+VIRTUAL_ORDER_BUY_TR_ID = "VTTC0802U"
+VIRTUAL_ORDER_SELL_TR_ID = "VTTC0801U"
 
 
 @dataclass(slots=True)
@@ -170,6 +176,84 @@ class KisApiClient:
             method="GET",
             headers=headers,
         )
+
+    def create_hash_key(self, payload: dict[str, Any]) -> str:
+        data = json.dumps(payload).encode("utf-8")
+        http_request = request.Request(
+            url=f"{self.config.base_url}{HASHKEY_PATH}",
+            data=data,
+            headers={
+                "content-type": "application/json; charset=utf-8",
+                "appkey": self.config.app_key,
+                "appsecret": self.config.app_secret,
+            },
+            method="POST",
+        )
+
+        try:
+            with request.urlopen(http_request, timeout=10) as response:
+                response_body = response.read().decode("utf-8")
+        except error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise KisApiError(
+                f"KIS hashkey request failed with HTTP {exc.code}: {error_body}"
+            ) from exc
+        except error.URLError as exc:
+            raise KisApiError(f"Failed to reach KIS API: {exc.reason}") from exc
+
+        decoded = self._load_json(response_body)
+        hash_value = decoded.get("HASH")
+        if not hash_value:
+            raise KisApiError(f"KIS hashkey response did not include HASH: {decoded}")
+        return str(hash_value)
+
+    def place_cash_order(
+        self,
+        *,
+        side: str,
+        symbol: str,
+        quantity: int,
+        price: int = 0,
+        order_division: str = "01",
+        token: KisAccessToken | None = None,
+    ) -> dict[str, Any]:
+        if not self.config.account_no:
+            raise KisApiError("KIS_ACCOUNT_NO must be set before placing orders.")
+        if not self.config.account_product_code:
+            raise KisApiError("KIS_ACCOUNT_PRODUCT_CODE must be set before placing orders.")
+
+        side_upper = side.strip().upper()
+        if side_upper not in {"BUY", "SELL"}:
+            raise KisApiError(f"Unsupported order side: {side}")
+        if quantity <= 0:
+            raise KisApiError("Order quantity must be greater than zero.")
+
+        current_token = token or self.get_access_token()
+        body = {
+            "CANO": self.config.account_no,
+            "ACNT_PRDT_CD": self.config.account_product_code,
+            "PDNO": symbol,
+            "ORD_DVSN": order_division,
+            "ORD_QTY": str(int(quantity)),
+            "ORD_UNPR": str(int(price)),
+        }
+        hash_key = self.create_hash_key(body)
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=self._resolve_order_tr_id(side_upper),
+        )
+        headers["hashkey"] = hash_key
+        return self._request_json(
+            path=ORDER_CASH_PATH,
+            method="POST",
+            headers=headers,
+            body=body,
+        )
+
+    def _resolve_order_tr_id(self, side: str) -> str:
+        if self.config.use_virtual:
+            return VIRTUAL_ORDER_BUY_TR_ID if side == "BUY" else VIRTUAL_ORDER_SELL_TR_ID
+        return LIVE_ORDER_BUY_TR_ID if side == "BUY" else LIVE_ORDER_SELL_TR_ID
 
     def _build_headers(self, *, access_token: str, tr_id: str) -> dict[str, str]:
         return {

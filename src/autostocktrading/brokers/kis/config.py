@@ -23,6 +23,7 @@ class KisConfig:
     use_virtual: bool = True
     account_no: str | None = None
     account_product_code: str = "01"
+    allow_live_orders: bool = False
 
     @property
     def base_url(self) -> str:
@@ -44,4 +45,8 @@ class KisConfig:
             use_virtual=_parse_bool(os.getenv("KIS_USE_VIRTUAL"), default=True),
             account_no=os.getenv("KIS_ACCOUNT_NO") or None,
             account_product_code=os.getenv("KIS_ACCOUNT_PRODUCT_CODE", "01"),
+            allow_live_orders=_parse_bool(
+                os.getenv("KIS_ALLOW_LIVE_ORDERS"),
+                default=False,
+            ),
         )
