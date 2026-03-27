@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 
-def load_env_file(env_path: Path) -> None:
+def load_env_file(env_path: Path, *, override: bool = False) -> None:
     if not env_path.exists():
         return
 
@@ -15,4 +15,7 @@ def load_env_file(env_path: Path) -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip())
+        normalized_key = key.strip()
+        normalized_value = value.strip()
+        if override or normalized_key not in os.environ:
+            os.environ[normalized_key] = normalized_value

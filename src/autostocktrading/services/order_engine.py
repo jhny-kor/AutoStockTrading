@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 from autostocktrading.brokers.kis import KisApiClient, KisConfig
 from autostocktrading.logs import DailyJsonlLogger, LogDirectoryManager
+from autostocktrading.services.order_notifications import notify_submission
 from autostocktrading.services.analysis_report import find_latest_analysis_date, read_latest_payload
 from autostocktrading.utils.state import load_json_state, save_json_state
 
@@ -66,11 +67,12 @@ def run_order_batch(
 
     state = load_json_state(
         state_path,
-        default={"ordered_receipts": {}, "today_count": {}, "last_seen": {}},
+        default={"ordered_receipts": {}, "today_count": {}, "last_seen": {}, "pending_orders": []},
     )
     ordered_receipts = state.setdefault("ordered_receipts", {})
     today_count = state.setdefault("today_count", {})
     last_seen = state.setdefault("last_seen", {})
+    pending_orders = state.setdefault("pending_orders", [])
     today_key = latest_date.isoformat()
     today_count.setdefault(today_key, 0)
 
@@ -138,6 +140,10 @@ def run_order_batch(
         if engine_config.dry_run:
             order_payload["status"] = "simulated"
             print(json.dumps(order_payload, ensure_ascii=False))
+            ordered_receipts[signal_key] = True
+            today_count[today_key] += 1
+            last_seen[symbol] = today_key
+            ordered_this_run += 1
         else:
             if not kis_config.allow_live_orders or kis_config.use_virtual:
                 raise RuntimeError(
@@ -151,8 +157,27 @@ def run_order_batch(
                 price=0 if order_division == "01" else int(current_price),
                 order_division=order_division,
             )
-            order_payload["status"] = "submitted"
-            order_payload["response"] = response
+            if str(response.get("rt_cd")) == "0":
+                order_payload["status"] = "submitted"
+                ordered_receipts[signal_key] = True
+                today_count[today_key] += 1
+                last_seen[symbol] = today_key
+                ordered_this_run += 1
+                output = response.get("output") or {}
+                order_payload["response"] = response
+                notify_submission(order_payload)
+                pending_orders.append(
+                    {
+                        "strategy_source": strategy_source,
+                        "symbol": symbol,
+                        "order_date": latest_date.strftime("%Y%m%d"),
+                        "order_branch_no": output.get("KRX_FWDG_ORD_ORGNO", ""),
+                        "order_no": output.get("ODNO", ""),
+                    }
+                )
+            else:
+                order_payload["status"] = "failed"
+                order_payload["response"] = response
             print(json.dumps(order_payload, ensure_ascii=False))
 
         trade_logger.append_event(
@@ -163,10 +188,6 @@ def run_order_batch(
             payload=order_payload,
             target_date=latest_date,
         )
-        ordered_receipts[signal_key] = True
-        today_count[today_key] += 1
-        last_seen[symbol] = today_key
-        ordered_this_run += 1
 
     save_json_state(state_path, state)
     return 0

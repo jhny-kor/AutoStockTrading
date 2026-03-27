@@ -11,6 +11,8 @@
 - `launchd/com.plo.autostockbot.startall.plist`
 - `launchd/com.plo.autostockbot.krlong.plist`
 - `launchd/com.plo.autostockbot.krshort.plist`
+- `launchd/com.plo.autostockbot.krshorttrade.plist`
+- `launchd/com.plo.autostockbot.telegram.plist`
 - `launchd/com.plo.autostockbot.reporter.plist`
 - `launchd/com.plo.autostockbot.disclosure.plist`
 
@@ -38,6 +40,18 @@
 
 ```bash
 .venv/bin/python bot_manager.py start kr_short
+```
+
+국장 단타 주문 엔진 시작:
+
+```bash
+.venv/bin/python bot_manager.py start kr_short_trade
+```
+
+텔레그램 명령 리스너 시작:
+
+```bash
+.venv/bin/python bot_manager.py start telegram
 ```
 
 일일 리포트 스케줄러 시작:
@@ -94,6 +108,8 @@ structured_logs/YYYY-MM-DD/...
 - `launchd/com.plo.autostockbot.startall.plist`
 - `launchd/com.plo.autostockbot.krlong.plist`
 - `launchd/com.plo.autostockbot.krshort.plist`
+- `launchd/com.plo.autostockbot.krshorttrade.plist`
+- `launchd/com.plo.autostockbot.telegram.plist`
 - `launchd/com.plo.autostockbot.reporter.plist`
 - `launchd/com.plo.autostockbot.disclosure.plist`
 

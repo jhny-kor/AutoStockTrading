@@ -14,6 +14,8 @@
 - .venv/bin/python bot_manager.py start kr_short
 - .venv/bin/python bot_manager.py start kr_long_trade
 - .venv/bin/python bot_manager.py start kr_short_trade
+- .venv/bin/python bot_manager.py start order_watch
+- .venv/bin/python bot_manager.py start telegram
 - .venv/bin/python bot_manager.py start reporter
 - .venv/bin/python bot_manager.py start disclosure
 - .venv/bin/python bot_manager.py stop
@@ -23,6 +25,8 @@
 - .venv/bin/python bot_manager.py stop kr_short
 - .venv/bin/python bot_manager.py stop kr_long_trade
 - .venv/bin/python bot_manager.py stop kr_short_trade
+- .venv/bin/python bot_manager.py stop order_watch
+- .venv/bin/python bot_manager.py stop telegram
 - .venv/bin/python bot_manager.py stop reporter
 - .venv/bin/python bot_manager.py stop disclosure
 - .venv/bin/python bot_manager.py stop --force
@@ -31,6 +35,8 @@
 - .venv/bin/python bot_manager.py stop kr_short --force
 - .venv/bin/python bot_manager.py stop kr_long_trade --force
 - .venv/bin/python bot_manager.py stop kr_short_trade --force
+- .venv/bin/python bot_manager.py stop order_watch --force
+- .venv/bin/python bot_manager.py stop telegram --force
 - .venv/bin/python bot_manager.py stop reporter --force
 - .venv/bin/python bot_manager.py stop disclosure --force
 """
@@ -48,6 +54,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 
+ROOT_DIR = Path(__file__).resolve().parent
 
 PROGRAMS = {
     "collector": "scripts/stock_analysis_collector.py",
@@ -55,6 +62,8 @@ PROGRAMS = {
     "kr_short": "scripts/kr_short_term_runner.py",
     "kr_long_trade": "scripts/kr_long_term_trader.py",
     "kr_short_trade": "scripts/kr_short_term_trader.py",
+    "order_watch": "scripts/order_status_watcher.py",
+    "telegram": "scripts/telegram_command_listener.py",
     "reporter": "scripts/daily_report_scheduler.py",
     "disclosure": "scripts/important_disclosure_watcher.py",
 }
@@ -65,6 +74,8 @@ SECTION_TITLES = {
     "kr_short": "국장 단타 시그널 러너",
     "kr_long_trade": "국장 장타 주문 엔진",
     "kr_short_trade": "국장 단타 주문 엔진",
+    "order_watch": "주문 상태 감시기",
+    "telegram": "텔레그램 명령 리스너",
     "reporter": "일일 리포트 스케줄러",
     "disclosure": "중요 공시 감시기",
 }
@@ -172,10 +183,15 @@ def command_matches_script(command: str, script: str) -> bool:
     except ValueError:
         tokens = command.split()
 
-    script_name = Path(script).name
+    expected_path = (ROOT_DIR / script).resolve()
     for token in tokens:
-        if Path(token).name == script_name:
-            return True
+        token_path = Path(token)
+        if token_path.is_absolute() or len(token_path.parts) > 1:
+            try:
+                if token_path.resolve() == expected_path:
+                    return True
+            except OSError:
+                continue
     return False
 
 
@@ -366,6 +382,8 @@ def handle_start(target: str) -> int:
                 "kr_short",
                 "kr_long_trade",
                 "kr_short_trade",
+                "order_watch",
+                "telegram",
                 "reporter",
                 "disclosure",
             )
@@ -452,7 +470,7 @@ def build_parser() -> argparse.ArgumentParser:
     start_parser = subparsers.add_parser("start", help="프로세스를 시작합니다.")
     start_parser.add_argument(
         "target",
-        choices=["all", "collector", "kr_long", "kr_short", "kr_long_trade", "kr_short_trade", "reporter", "disclosure"],
+        choices=["all", "collector", "kr_long", "kr_short", "kr_long_trade", "kr_short_trade", "order_watch", "telegram", "reporter", "disclosure"],
         help="시작할 대상",
     )
 
@@ -461,7 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
         "target",
         nargs="?",
         default="all",
-        choices=["all", "collector", "kr_long", "kr_short", "kr_long_trade", "kr_short_trade", "reporter", "disclosure"],
+        choices=["all", "collector", "kr_long", "kr_short", "kr_long_trade", "kr_short_trade", "order_watch", "telegram", "reporter", "disclosure"],
         help="중지할 대상 (기본값: all)",
     )
     stop_parser.add_argument(

@@ -19,6 +19,9 @@ INQUIRE_DAILY_ITEMCHART_PRICE_PATH = (
     "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
 )
 ORDER_CASH_PATH = "/uapi/domestic-stock/v1/trading/order-cash"
+INQUIRE_BALANCE_PATH = "/uapi/domestic-stock/v1/trading/inquire-balance"
+INQUIRE_POSSIBLE_ORDER_PATH = "/uapi/domestic-stock/v1/trading/inquire-psbl-order"
+INQUIRE_DAILY_CCLD_PATH = "/uapi/domestic-stock/v1/trading/inquire-daily-ccld"
 DEFAULT_DOMESTIC_PRICE_TR_ID = "FHKST01010100"
 DEFAULT_DAILY_PRICE_TR_ID = "FHKST01010400"
 DEFAULT_DAILY_ITEMCHART_TR_ID = "FHKST03010100"
@@ -26,6 +29,12 @@ LIVE_ORDER_BUY_TR_ID = "TTTC0802U"
 LIVE_ORDER_SELL_TR_ID = "TTTC0801U"
 VIRTUAL_ORDER_BUY_TR_ID = "VTTC0802U"
 VIRTUAL_ORDER_SELL_TR_ID = "VTTC0801U"
+LIVE_BALANCE_TR_ID = "TTTC8434R"
+VIRTUAL_BALANCE_TR_ID = "VTTC8434R"
+LIVE_POSSIBLE_ORDER_TR_ID = "TTTC8908R"
+VIRTUAL_POSSIBLE_ORDER_TR_ID = "VTTC8908R"
+LIVE_DAILY_CCLD_TR_ID = "TTTC0081R"
+VIRTUAL_DAILY_CCLD_TR_ID = "VTTC8001R"
 
 
 @dataclass(slots=True)
@@ -250,6 +259,154 @@ class KisApiClient:
             body=body,
         )
 
+    def inquire_balance(self, *, token: KisAccessToken | None = None) -> dict[str, Any]:
+        if not self.config.account_no:
+            raise KisApiError("KIS_ACCOUNT_NO must be set before balance inquiry.")
+
+        current_token = token or self.get_access_token()
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=VIRTUAL_BALANCE_TR_ID if self.config.use_virtual else LIVE_BALANCE_TR_ID,
+        )
+        headers["tr_cont"] = ""
+
+        output1: list[dict[str, Any]] = []
+        output2: list[dict[str, Any]] = []
+        ctx_area_fk100 = ""
+        ctx_area_nk100 = ""
+
+        while True:
+            params = {
+                "CANO": self.config.account_no,
+                "ACNT_PRDT_CD": self.config.account_product_code,
+                "AFHR_FLPR_YN": "N",
+                "OFL_YN": "",
+                "INQR_DVSN": "02",
+                "UNPR_DVSN": "01",
+                "FUND_STTL_ICLD_YN": "N",
+                "FNCG_AMT_AUTO_RDPT_YN": "N",
+                "PRCS_DVSN": "01",
+                "CTX_AREA_FK100": ctx_area_fk100,
+                "CTX_AREA_NK100": ctx_area_nk100,
+            }
+            query_string = parse.urlencode(params)
+            payload, response_headers = self._request_json_with_headers(
+                path=f"{INQUIRE_BALANCE_PATH}?{query_string}",
+                method="GET",
+                headers=headers,
+            )
+            output1.extend(payload.get("output1") or [])
+            output2 = payload.get("output2") or output2
+            ctx_area_fk100 = payload.get("ctx_area_fk100", "")
+            ctx_area_nk100 = payload.get("ctx_area_nk100", "")
+            tr_cont = response_headers.get("tr_cont", "")
+            if tr_cont not in {"F", "M"}:
+                return {
+                    "rt_cd": payload.get("rt_cd"),
+                    "msg1": payload.get("msg1"),
+                    "output1": output1,
+                    "output2": output2,
+                }
+            headers["tr_cont"] = "N"
+
+    def inquire_possible_order_cash(
+        self,
+        *,
+        symbol: str = "005930",
+        price: int = 0,
+        order_division: str = "01",
+        token: KisAccessToken | None = None,
+    ) -> dict[str, Any]:
+        if not self.config.account_no:
+            raise KisApiError("KIS_ACCOUNT_NO must be set before possible-order inquiry.")
+
+        current_token = token or self.get_access_token()
+        params = {
+            "CANO": self.config.account_no,
+            "ACNT_PRDT_CD": self.config.account_product_code,
+            "PDNO": symbol,
+            "ORD_UNPR": str(int(price)),
+            "ORD_DVSN": order_division,
+            "CMA_EVLU_AMT_ICLD_YN": "Y",
+            "OVRS_ICLD_YN": "Y",
+        }
+        query_string = parse.urlencode(params)
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=VIRTUAL_POSSIBLE_ORDER_TR_ID if self.config.use_virtual else LIVE_POSSIBLE_ORDER_TR_ID,
+        )
+        return self._request_json(
+            path=f"{INQUIRE_POSSIBLE_ORDER_PATH}?{query_string}",
+            method="GET",
+            headers=headers,
+        )
+
+    def inquire_daily_ccld(
+        self,
+        *,
+        start_date: str,
+        end_date: str,
+        side_code: str = "00",
+        ccld_dvsn: str = "00",
+        inqr_dvsn: str = "00",
+        inqr_dvsn_3: str = "00",
+        symbol: str = "",
+        order_branch_no: str = "",
+        order_no: str = "",
+        token: KisAccessToken | None = None,
+    ) -> dict[str, Any]:
+        if not self.config.account_no:
+            raise KisApiError("KIS_ACCOUNT_NO must be set before daily order inquiry.")
+
+        current_token = token or self.get_access_token()
+        headers = self._build_headers(
+            access_token=current_token.access_token,
+            tr_id=VIRTUAL_DAILY_CCLD_TR_ID if self.config.use_virtual else LIVE_DAILY_CCLD_TR_ID,
+        )
+        headers["tr_cont"] = ""
+        output1: list[dict[str, Any]] = []
+        output2: dict[str, Any] = {}
+        ctx_area_fk100 = ""
+        ctx_area_nk100 = ""
+
+        while True:
+            params = {
+                "CANO": self.config.account_no,
+                "ACNT_PRDT_CD": self.config.account_product_code,
+                "INQR_STRT_DT": start_date,
+                "INQR_END_DT": end_date,
+                "SLL_BUY_DVSN_CD": side_code,
+                "PDNO": symbol,
+                "CCLD_DVSN": ccld_dvsn,
+                "INQR_DVSN": inqr_dvsn,
+                "INQR_DVSN_3": inqr_dvsn_3,
+                "ORD_GNO_BRNO": order_branch_no,
+                "ODNO": order_no,
+                "INQR_DVSN_1": "",
+                "CTX_AREA_FK100": ctx_area_fk100,
+                "CTX_AREA_NK100": ctx_area_nk100,
+                "EXCG_ID_DVSN_CD": "KRX",
+            }
+            query_string = parse.urlencode(params)
+            payload, response_headers = self._request_json_with_headers(
+                path=f"{INQUIRE_DAILY_CCLD_PATH}?{query_string}",
+                method="GET",
+                headers=headers,
+            )
+            output1.extend(payload.get("output1") or [])
+            output2 = payload.get("output2") or output2
+            ctx_area_fk100 = payload.get("ctx_area_fk100", "")
+            ctx_area_nk100 = payload.get("ctx_area_nk100", "")
+            tr_cont = response_headers.get("tr_cont", "")
+            if tr_cont not in {"F", "M"}:
+                return {
+                    "rt_cd": payload.get("rt_cd"),
+                    "msg1": payload.get("msg1"),
+                    "output1": output1,
+                    "output2": output2,
+                }
+            headers["tr_cont"] = "N"
+
     def _resolve_order_tr_id(self, side: str) -> str:
         if self.config.use_virtual:
             return VIRTUAL_ORDER_BUY_TR_ID if side == "BUY" else VIRTUAL_ORDER_SELL_TR_ID
@@ -296,6 +453,38 @@ class KisApiClient:
             raise KisApiError(f"Failed to reach KIS API: {exc.reason}") from exc
 
         return self._load_json(response_body)
+
+    def _request_json_with_headers(
+        self,
+        *,
+        path: str,
+        method: str,
+        headers: dict[str, str],
+        body: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, str]]:
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode("utf-8")
+
+        http_request = request.Request(
+            url=f"{self.config.base_url}{path}",
+            data=data,
+            headers=headers,
+            method=method,
+        )
+        try:
+            with request.urlopen(http_request, timeout=10) as response:
+                response_body = response.read().decode("utf-8")
+                response_headers = {key.lower(): value for key, value in response.headers.items()}
+        except error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise KisApiError(
+                f"KIS request failed with HTTP {exc.code}: {error_body}"
+            ) from exc
+        except error.URLError as exc:
+            raise KisApiError(f"Failed to reach KIS API: {exc.reason}") from exc
+
+        return self._load_json(response_body), response_headers
 
     @staticmethod
     def _load_json(raw_text: str) -> dict[str, Any]:

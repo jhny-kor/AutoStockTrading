@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 
@@ -15,6 +16,14 @@ def _metric(snapshot: dict[str, Any], key: str) -> float | None:
         return None
 
 
+def _max_entry_price() -> float:
+    raw = os.getenv("KR_SHORT_MAX_ENTRY_PRICE_KRW", "50000").strip()
+    try:
+        return float(raw)
+    except ValueError:
+        return 50000.0
+
+
 def evaluate_short_term_candidate(snapshot: dict[str, Any]) -> dict[str, Any]:
     rsi = _metric(snapshot, "rsi_14")
     volume_ratio = _metric(snapshot, "volume_ratio_20")
@@ -22,8 +31,12 @@ def evaluate_short_term_candidate(snapshot: dict[str, Any]) -> dict[str, Any]:
     range_position = _metric(snapshot, "range_position_20d_pct")
     day_change = _metric(snapshot, "day_change_pct")
     five_day = _metric(snapshot, "daily_return_5d_pct")
+    current_price = _metric(snapshot, "current_price")
+    max_entry_price = _max_entry_price()
 
     breakout_blockers: list[str] = []
+    if current_price is None or current_price > max_entry_price:
+        breakout_blockers.append("price_above_short_budget")
     if not snapshot.get("above_sma_20"):
         breakout_blockers.append("below_sma_20")
     if volume_ratio is None or volume_ratio < 1.1:
@@ -36,6 +49,8 @@ def evaluate_short_term_candidate(snapshot: dict[str, Any]) -> dict[str, Any]:
         breakout_blockers.append("daily_momentum_negative")
 
     pullback_blockers: list[str] = []
+    if current_price is None or current_price > max_entry_price:
+        pullback_blockers.append("price_above_short_budget")
     if not snapshot.get("above_sma_20"):
         pullback_blockers.append("below_sma_20")
     if price_vs_sma20 is None or not (0 <= price_vs_sma20 <= 3.0):
@@ -61,6 +76,8 @@ def evaluate_short_term_candidate(snapshot: dict[str, Any]) -> dict[str, Any]:
         "pullback_blockers": pullback_blockers,
         "rsi_14": rsi,
         "volume_ratio_20": volume_ratio,
+        "current_price": current_price,
+        "max_entry_price_krw": max_entry_price,
         "price_vs_sma_20_pct": price_vs_sma20,
         "range_position_20d_pct": range_position,
         "day_change_pct": day_change,

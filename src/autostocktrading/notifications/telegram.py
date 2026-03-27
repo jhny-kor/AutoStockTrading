@@ -6,9 +6,15 @@ from dataclasses import dataclass
 import json
 import mimetypes
 import os
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 from urllib import error, request
+
+from autostocktrading.utils.env import load_env_file
+
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
 
 
 def _parse_bool(raw: str | None, default: bool = False) -> bool:
@@ -29,6 +35,28 @@ def _extract_api_error_detail(body: bytes) -> str | None:
         return None
     description = payload.get("description")
     return description.strip() if isinstance(description, str) and description.strip() else None
+
+
+def _normalize_env_prefix(prefix: str | None) -> str | None:
+    if prefix is None:
+        prefix = os.getenv("TELEGRAM_ENV_PREFIX")
+    if prefix is None:
+        return None
+    normalized = prefix.strip().upper().strip("_")
+    return normalized or None
+
+
+def _resolve_telegram_env(name: str, prefix: str | None) -> str | None:
+    normalized_prefix = _normalize_env_prefix(prefix)
+    candidate_keys: list[str] = []
+    if normalized_prefix:
+        candidate_keys.append(f"{normalized_prefix}_{name}")
+    candidate_keys.append(name)
+    for key in candidate_keys:
+        value = os.getenv(key)
+        if value is not None:
+            return value
+    return None
 
 
 def format_telegram_request_error(exc: Exception) -> str:
@@ -177,9 +205,12 @@ def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
     return chunks
 
 
-def load_telegram_notifier() -> TelegramNotifier:
+def load_telegram_notifier(prefix: str | None = None) -> TelegramNotifier:
+    # Keep process-level env overrides intact so another bot can inject its own
+    # Telegram credentials without being overwritten by this repo's .env file.
+    load_env_file(ROOT_DIR / ".env", override=False)
     return TelegramNotifier(
-        enabled=_parse_bool(os.getenv("TELEGRAM_ENABLED"), default=False),
-        bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
-        chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
+        enabled=_parse_bool(_resolve_telegram_env("TELEGRAM_ENABLED", prefix), default=False),
+        bot_token=_resolve_telegram_env("TELEGRAM_BOT_TOKEN", prefix) or "",
+        chat_id=_resolve_telegram_env("TELEGRAM_CHAT_ID", prefix) or "",
     )

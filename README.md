@@ -25,6 +25,7 @@
 - [국장 주문 엔진](./docs/trading-engine.md)
 - [국장 전략 정리](./docs/kr-strategies.md)
 - [국장 체크리스트](./docs/kr-checklists.md)
+- [프로세스 관리](./docs/process-management.md)
 
 ## 추천 방향
 
