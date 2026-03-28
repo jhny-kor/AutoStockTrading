@@ -1,0 +1,50 @@
+"""Run the US short-term strategy on shared overseas analysis logs."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import sys
+import time
+
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from autostocktrading.config.us_strategy_watchlists import get_us_short_term_entries  # noqa: E402
+from autostocktrading.strategies.us_short_term import evaluate_us_short_term_candidate  # noqa: E402
+from autostocktrading.services.us_strategy_signal_runner import run_us_signal_batch  # noqa: E402
+
+
+STATE_PATH = ROOT_DIR / "logs" / "state" / "us_short_term_runner.json"
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Run the US short-term signal runner.")
+    parser.add_argument("--once", action="store_true", help="Run one evaluation pass and exit.")
+    parser.add_argument("--poll-sec", type=int, default=60, help="Polling interval in seconds. Default: 60")
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+    while True:
+        code = run_us_signal_batch(
+            strategy_source="us_short_term",
+            strategy_category="short_term",
+            entries=get_us_short_term_entries(),
+            evaluate_fn=evaluate_us_short_term_candidate,
+            state_path=STATE_PATH,
+        )
+        if code != 0:
+            return code
+        if args.once:
+            break
+        time.sleep(max(args.poll_sec, 15))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

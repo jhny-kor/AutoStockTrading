@@ -9,7 +9,7 @@ src/
   brokers/
     base.py
     kis/
-    ibkr/
+    kis_overseas/
   strategies/
   services/
   config/
@@ -33,7 +33,7 @@ scripts/
 - `cancel_order(order_id)`
 - `stream_ticks(symbols)`
 
-이 인터페이스를 먼저 만들면 한국투자증권과 IBKR를 같은 전략 엔진에서 다룰 수 있습니다.
+이 인터페이스를 먼저 만들면 한국투자증권 국내주식과 해외주식을 같은 전략 엔진에서 다룰 수 있습니다.
 
 ## 3단계: 모의투자 우선 연결
 
@@ -98,5 +98,5 @@ scripts/
 1. Python 프로젝트 초기화
 2. 브로커 공통 인터페이스 정의
 3. `한국투자증권`용 기본 인증/시세 조회 구현
-4. `IBKR` 또는 `Alpaca`용 기본 계좌/시세 조회 구현
+4. `한국투자증권 해외주식`용 기본 계좌/시세 조회 구현
 5. 주문 로그와 알림 모듈 추가

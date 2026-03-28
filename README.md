@@ -5,12 +5,12 @@
 현재 기준 추천 조합은 아래와 같습니다.
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `Interactive Brokers (IBKR)`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
 개발 속도를 우선하면 아래 조합도 유효합니다.
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `Alpaca`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
 ## 문서
 
@@ -74,5 +74,4 @@ AutoStockTrading/
 
 - 한국투자증권 개발자센터: [KIS Developers](https://apiportal.koreainvestment.com/intro)
 - 키움 OpenAPI: [Kiwoom OpenAPI](https://openapi.kiwoom.com/)
-- IBKR API: [IBKR Campus API](https://ibkrcampus.com/campus/ibkr-api-page/)
 - Alpaca Trading API: [Alpaca Docs](https://docs.alpaca.markets/docs/trading-api)

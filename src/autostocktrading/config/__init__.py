@@ -12,6 +12,13 @@ from .watchlist import (
     get_watchlist_entry,
     resolve_watchlist_entries,
 )
+from .us_strategy_watchlists import (
+    US_LONG_TERM_WATCHLIST,
+    US_SHORT_TERM_WATCHLIST,
+    UsWatchlistEntry,
+    get_us_long_term_entries,
+    get_us_short_term_entries,
+)
 
 __all__ = [
     "DEFAULT_ANALYSIS_WATCHLIST",
@@ -24,4 +31,9 @@ __all__ = [
     "get_watchlist_entries_by_tier",
     "get_watchlist_entry",
     "resolve_watchlist_entries",
+    "US_LONG_TERM_WATCHLIST",
+    "US_SHORT_TERM_WATCHLIST",
+    "UsWatchlistEntry",
+    "get_us_long_term_entries",
+    "get_us_short_term_entries",
 ]

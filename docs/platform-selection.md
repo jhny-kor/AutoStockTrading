@@ -5,17 +5,12 @@
 실전 운영까지 고려한 기본 추천 조합은 아래와 같습니다.
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `Interactive Brokers (IBKR)`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
 빠른 프로토타이핑이 우선이면 아래 조합도 좋습니다.
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `Alpaca`
-
-국내 조건검색과 국내 자동매매 커뮤니티 자료를 중시하면 아래 조합도 고려할 수 있습니다.
-
-- 한국주식: `키움 REST API`
-- 미국주식: `IBKR`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
 ## 비교 요약
 
@@ -23,8 +18,7 @@
 | --- | --- | --- | --- | --- |
 | 한국주식 | 한국투자증권 Open API | 높음 | 국내/해외주식 모두 공식 지원, REST/WebSocket 제공, 개인 개발자 접근성 우수 | 인증과 호출 규격을 정확히 맞춰야 함 |
 | 한국주식 | 키움 REST API | 중상 | 국내 사용자 자료가 많고 조건검색 친화적 | 실전/모의 키 분리, 허용 IP 등록 필요, 모의투자 제약 확인 필요 |
-| 미국주식 | IBKR | 높음 | API 성숙도 높음, 실전 안정성 우수, 자산 확장성 좋음 | 초기 설정과 개념이 비교적 복잡함 |
-| 미국주식 | Alpaca | 중상 | 페이퍼 트레이딩 진입이 빠름, 개발 경험이 단순함 | 실계좌 사용 가능 국가와 운영 조건 확인 필요 |
+| 미국주식 | 한국투자증권 해외주식 Open API | 높음 | 같은 계좌 체계로 국장/미장 운영 가능, 공식 주문/계좌 API 제공 | 해외주식 권한과 환전/주문 세션을 함께 확인해야 함 |
 
 ## 한국주식 추천
 
@@ -71,60 +65,40 @@
 
 ## 미국주식 추천
 
-### 1. Interactive Brokers (IBKR)
+### 1. 한국투자증권 해외주식 Open API
 
-실전 지향이라면 가장 균형이 좋습니다.
+현재 저장소 기준으로는 가장 일관성이 좋습니다.
 
-- API 성숙도가 높고 운영 사례가 많음
-- `Web API`와 `TWS API` 선택지가 있어 전략과 인프라 성격에 맞게 설계 가능
-- `paper trading`으로 실전 전 검증 가능
-- 미국주식 외 다른 시장과 자산군으로 확장하기 좋음
+- 국장과 같은 증권사/계좌 체계로 운영 가능
+- `해외주식 주문/계좌`, `기본시세`, `실시간시세`가 공식 서비스 목록에 포함됨
+- 국장 로직과 공통 구조를 재사용하기 좋음
 
 적합한 경우:
 
-- 실전 안정성과 장기 확장성을 우선할 때
-- 포트폴리오가 미국주식에만 머물지 않을 가능성이 있을 때
-- 운영 중 장애 대응과 모니터링을 체계적으로 가져가고 싶을 때
+- 국장과 미장을 같은 저장소에서 같이 관리하고 싶을 때
+- 브로커 수를 늘리지 않고 한 계열 API로 통합하고 싶을 때
+- 실거래 운영 복잡도를 줄이고 싶을 때
 
 공식 링크:
 
-- [IBKR Web API](https://ibkrcampus.com/campus/ibkr-api-page/web-api-trading/)
-- [IBKR TWS API](https://ibkrcampus.com/campus/ibkr-api-page/twsapi-doc/)
-- [IBKR Paper Trading](https://ibkrcampus.com/campus/glossary-terms/paper-trading-account/)
-
-### 2. Alpaca
-
-개발 속도를 우선하면 좋은 선택입니다.
-
-- 페이퍼 트레이딩 진입이 빠름
-- API 사용 흐름이 비교적 단순함
-- 초기 프로토타입과 전략 검증용으로 편함
-
-주의할 점:
-
-- 실계좌 제공 국가와 계좌 개설 가능 여부를 운영 전 확인
-- 장기 운영에서는 브로커 안정성, 주문 유형, 운영 정책을 재검토하는 것이 좋음
-
-공식 링크:
-
-- [Alpaca Trading API](https://docs.alpaca.markets/docs/trading-api)
-- [Supported Countries](https://alpaca.markets/support/countries-alpaca-is-available)
+- [KIS Developers](https://apiportal.koreainvestment.com/intro)
+- [API 서비스 개요](https://apiportal.koreainvestment.com/apiservice-summary)
 
 ## 이 저장소 기준 최종 추천
 
 ### 기본안
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `IBKR`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
-이 조합은 실전성, 문서 신뢰도, 장기 유지보수성의 균형이 좋습니다.
+이 조합은 국장/미장을 같은 계좌 체계와 코드 구조로 가져가기 좋습니다.
 
 ### 빠른 MVP안
 
 - 한국주식: `한국투자증권 Open API`
-- 미국주식: `Alpaca`
+- 미국주식: `한국투자증권 해외주식 Open API`
 
-이 조합은 초기 개발 속도와 테스트 편의성이 좋습니다.
+이 조합은 브로커를 분리하지 않아 구현 복잡도가 낮습니다.
 
 ## Python 기준 추천 기술 스택
 
