@@ -11,6 +11,7 @@
 - `launchd/com.plo.autostockbot.startall.plist`
 - `launchd/com.plo.autostockbot.krlong.plist`
 - `launchd/com.plo.autostockbot.krshort.plist`
+- `launchd/com.plo.autostockbot.krlongtrade.plist`
 - `launchd/com.plo.autostockbot.krshorttrade.plist`
 - `launchd/com.plo.autostockbot.telegram.plist`
 - `launchd/com.plo.autostockbot.reporter.plist`
@@ -108,6 +109,7 @@ structured_logs/YYYY-MM-DD/...
 - `launchd/com.plo.autostockbot.startall.plist`
 - `launchd/com.plo.autostockbot.krlong.plist`
 - `launchd/com.plo.autostockbot.krshort.plist`
+- `launchd/com.plo.autostockbot.krlongtrade.plist`
 - `launchd/com.plo.autostockbot.krshorttrade.plist`
 - `launchd/com.plo.autostockbot.telegram.plist`
 - `launchd/com.plo.autostockbot.reporter.plist`

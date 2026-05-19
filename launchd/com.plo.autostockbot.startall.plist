@@ -24,9 +24,9 @@
   <string>Background</string>
 
   <key>StandardOutPath</key>
-  <string>/Users/plo/Documents/auto_stock_bot/logs/launchd_autostart.out</string>
+  <string>/Users/plo/Library/Logs/AutoStockBot/launchd_autostart.out</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/plo/Documents/auto_stock_bot/logs/launchd_autostart.err</string>
+  <string>/Users/plo/Library/Logs/AutoStockBot/launchd_autostart.err</string>
 </dict>
 </plist>

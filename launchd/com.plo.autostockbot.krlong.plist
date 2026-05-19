@@ -18,8 +18,8 @@
   <key>ProcessType</key>
   <string>Background</string>
   <key>StandardOutPath</key>
-  <string>/Users/plo/Documents/auto_stock_bot/logs/kr_long_term_runner.out</string>
+  <string>/Users/plo/Library/Logs/AutoStockBot/kr_long_term_runner.out</string>
   <key>StandardErrorPath</key>
-  <string>/Users/plo/Documents/auto_stock_bot/logs/kr_long_term_runner.err</string>
+  <string>/Users/plo/Library/Logs/AutoStockBot/kr_long_term_runner.err</string>
 </dict>
 </plist>
