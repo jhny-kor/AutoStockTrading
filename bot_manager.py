@@ -6,7 +6,7 @@
 - 정상 종료 및 강제 종료
 - launchd 자동 시작과 함께 사용할 수 있는 진입점 제공
 
-가능한 명령
+터미널에서 바로 쓰는 상태/시작/중지 명령
 - .venv/bin/python bot_manager.py status
 - .venv/bin/python bot_manager.py start all
 - .venv/bin/python bot_manager.py start collector
@@ -219,7 +219,13 @@ def list_managed_processes(exclude_current: bool = True) -> list[ManagedProcess]
             capture_output=True,
             text=True,
             check=True,
+            timeout=2,
         )
+    except subprocess.TimeoutExpired:
+        PROCESS_LIST_WARNING = (
+            "프로세스 목록 조회가 시간 초과되어 PID 파일 기준 상태를 표시합니다."
+        )
+        return build_pidfile_fallback_processes(exclude_current=exclude_current)
     except PermissionError:
         PROCESS_LIST_WARNING = (
             "프로세스 목록 조회 권한이 없어 PID 파일 기준 상태를 표시합니다."
@@ -279,8 +285,11 @@ def get_processes_by_name(name: str) -> list[ManagedProcess]:
     return [proc for proc in list_managed_processes() if proc.name == name]
 
 
-def build_status_lines(use_color: bool = True) -> list[str]:
-    processes = list_managed_processes()
+def build_status_lines(
+    use_color: bool = True,
+    exclude_current: bool = True,
+) -> list[str]:
+    processes = list_managed_processes(exclude_current=exclude_current)
     lines: list[str] = []
     header = "한국주식 자동매매 프로세스 상태"
     separator = "=" * 50
@@ -328,7 +337,7 @@ def build_status_lines(use_color: bool = True) -> list[str]:
 
 
 def print_status() -> None:
-    print("\n".join(build_status_lines(use_color=True)))
+    print("\n".join(build_status_lines(use_color=True, exclude_current=True)))
 
 
 def start_program(name: str) -> int:
