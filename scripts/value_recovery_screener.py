@@ -15,6 +15,9 @@ if str(SRC_DIR) not in sys.path:
 
 from autostocktrading.services.analysis_report import find_latest_analysis_date  # noqa: E402
 from autostocktrading.services.value_screener import build_screener_report  # noqa: E402
+from autostocktrading.utils.output import configure_utf8_stdio  # noqa: E402
+
+configure_utf8_stdio()
 
 
 def parse_iso_date(raw: str) -> date:

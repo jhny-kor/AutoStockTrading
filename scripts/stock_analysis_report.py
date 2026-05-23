@@ -17,6 +17,9 @@ from autostocktrading.services.analysis_report import (  # noqa: E402
     build_analysis_report,
     find_latest_analysis_date,
 )
+from autostocktrading.utils.output import configure_utf8_stdio  # noqa: E402
+
+configure_utf8_stdio()
 
 
 def parse_iso_date(raw: str) -> date:

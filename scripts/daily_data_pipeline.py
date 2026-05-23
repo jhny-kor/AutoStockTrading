@@ -19,9 +19,12 @@ from autostocktrading.logs import LogDirectoryManager, archive_old_log_directori
 from autostocktrading.services.analysis_report import build_analysis_report, find_latest_analysis_date  # noqa: E402
 from autostocktrading.services.value_screener import build_screener_report  # noqa: E402
 from autostocktrading.utils.env import load_env_file  # noqa: E402
+from autostocktrading.utils.output import configure_utf8_stdio  # noqa: E402
 from autostocktrading.strategies import evaluate_buy_candidate  # noqa: E402
 from autostocktrading.services.stock_analysis import build_stock_analysis_snapshot, parse_daily_bars  # noqa: E402
 from autostocktrading.logs import DailyJsonlLogger  # noqa: E402
+
+configure_utf8_stdio()
 
 
 ARCHIVE_ROOTS = (

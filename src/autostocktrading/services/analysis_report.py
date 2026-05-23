@@ -13,6 +13,16 @@ from autostocktrading.config import resolve_watchlist_entries
 ROOT_DIR = Path(__file__).resolve().parents[3]
 
 
+def _format_number(value: object, *, digits: int = 2, suffix: str = "") -> str:
+    if value is None:
+        return "N/A"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f"{number:.{digits}f}{suffix}"
+
+
 def find_latest_analysis_date(base_dir: Path | None = None) -> date | None:
     target = base_dir or (ROOT_DIR / "analysis_logs")
     if not target.exists():
@@ -61,8 +71,9 @@ def build_analysis_report(target_date: date, watchlists: list[str] | None = None
             label = decision.get("candidate_type") or "candidate"
             type_buckets[label].append(entry.name)
             candidate_lines.append(
-                f"- {entry.name} ({entry.symbol}): {label}, RSI {analysis.get('rsi_14'):.2f}, "
-                f"20일선 대비 {analysis.get('price_vs_sma_20_pct'):.2f}%, 거래량배수 {analysis.get('volume_ratio_20'):.2f}"
+                f"- {entry.name} ({entry.symbol}): {label}, RSI {_format_number(analysis.get('rsi_14'))}, "
+                f"20일선 대비 {_format_number(analysis.get('price_vs_sma_20_pct'), suffix='%')}, "
+                f"거래량배수 {_format_number(analysis.get('volume_ratio_20'))}"
             )
 
         blockers = (
@@ -81,11 +92,13 @@ def build_analysis_report(target_date: date, watchlists: list[str] | None = None
                     f"- 장기 포인트: {entry.long_term_reason}",
                     f"- 현재가: {analysis.get('current_price')}",
                     f"- 일간 등락률: {analysis.get('day_change_pct')}%",
-                    f"- 5일/20일 수익률: {analysis.get('daily_return_5d_pct'):.2f}% / {analysis.get('daily_return_20d_pct'):.2f}%",
-                    f"- RSI 14: {analysis.get('rsi_14'):.2f}",
-                    f"- 거래량 배수(20일): {analysis.get('volume_ratio_20'):.2f}",
-                    f"- 20일선/60일선 대비: {analysis.get('price_vs_sma_20_pct'):.2f}% / {analysis.get('price_vs_sma_60_pct'):.2f}%",
-                    f"- 20일 범위 위치: {analysis.get('range_position_20d_pct'):.2f}%",
+                    f"- 5일/20일 수익률: {_format_number(analysis.get('daily_return_5d_pct'), suffix='%')} / "
+                    f"{_format_number(analysis.get('daily_return_20d_pct'), suffix='%')}",
+                    f"- RSI 14: {_format_number(analysis.get('rsi_14'))}",
+                    f"- 거래량 배수(20일): {_format_number(analysis.get('volume_ratio_20'))}",
+                    f"- 20일선/60일선 대비: {_format_number(analysis.get('price_vs_sma_20_pct'), suffix='%')} / "
+                    f"{_format_number(analysis.get('price_vs_sma_60_pct'), suffix='%')}",
+                    f"- 20일 범위 위치: {_format_number(analysis.get('range_position_20d_pct'), suffix='%')}",
                     f"- 매수 후보: {decision.get('buy_candidate')} ({decision.get('candidate_type')})",
                     f"- 차단 사유: {blocker_text}",
                 ]
